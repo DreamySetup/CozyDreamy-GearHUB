@@ -377,7 +377,7 @@
         </div>
 
         <div class="feed-list" id="feedList" aria-live="polite"></div>
-        <p class="storage-note">Posts and votes are saved in this browser on this device. Posts created here can be deleted from this browser for 5 hours. No account, tracking, or server required.</p>
+        <p class="storage-note">Posts, votes, and comments are shared online. Post without making an account; deleting your post is limited to the browser that created it for five hours.</p>
       </section>
 
       <aside class="sidebar" aria-label="About Gearboard">
@@ -479,9 +479,8 @@
     (() => {
       "use strict";
 
-      const STORAGE_KEY = "gearboard.posts.v1";
-      const VOTES_KEY = "gearboard.votes.v1";
-      const OWNER_KEY = "gearboard.owner.v1";
+      const SUPABASE_URL = "https://ltcmeiwswpsbvlaqyscg.supabase.co";
+      const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx0Y21laXdzd3BzYnZsYXF5c2NnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI1OTI4NzMsImV4cCI6MjEwODE2ODg3M30.m68OtGFeaiaLSyiWHcR_xz9gs72--rKTAH-Uc2_s2MY";
       const DELETE_WINDOW_MS = 5 * 60 * 60 * 1000;
       const IMAGE_MODEL_THRESHOLD = 0.35;
       const feedList = document.getElementById("feedList");
@@ -503,75 +502,18 @@
       const themeLabel = document.getElementById("themeLabel");
       const themeColorMeta = document.getElementById("themeColorMeta");
       const toast = document.getElementById("toast");
-      let posts = readStoredArray(STORAGE_KEY);
-      let votes = readStoredObject(VOTES_KEY);
+      let posts = [];
+      let votes = {};
+      let ownerId = null;
+      let supabaseClient = null;
+      let backendReady = false;
+      let backendInitialization = null;
       let toastTimer;
       let activeCommentPost = null;
       let pendingComment = null;
       let moderationModelPromise = null;
       const imageSafety = new Map();
       const imageChecks = new Map();
-      let ownerId = getOwnerId();
-
-      function getOwnerId() {
-        try {
-          let id = localStorage.getItem(OWNER_KEY);
-          if (!id) {
-            id = typeof crypto.randomUUID === "function"
-              ? crypto.randomUUID()
-              : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-            localStorage.setItem(OWNER_KEY, id);
-          }
-          return id;
-        } catch (error) {
-          console.error("Could not load this browser's post ownership key.", error);
-          return null;
-        }
-      }
-
-      function readStoredArray(key) {
-        try {
-          const value = JSON.parse(localStorage.getItem(key) || "[]");
-          return Array.isArray(value) ? value.filter(post => post && typeof post.id === "string") : [];
-        } catch (error) {
-          console.error("Could not read saved Gearboard posts.", error);
-          showToast("Saved posts could not be loaded.");
-          return [];
-        }
-      }
-
-      function readStoredObject(key) {
-        try {
-          const value = JSON.parse(localStorage.getItem(key) || "{}");
-          return value && typeof value === "object" && !Array.isArray(value) ? value : {};
-        } catch (error) {
-          console.error("Could not read saved Gearboard votes.", error);
-          return {};
-        }
-      }
-
-      function savePosts() {
-        try {
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(posts));
-          return true;
-        } catch (error) {
-          console.error("Could not save Gearboard posts.", error);
-          showToast("Could not save. Browser storage may be full.");
-          return false;
-        }
-      }
-
-      function saveVotes() {
-        try {
-          localStorage.setItem(VOTES_KEY, JSON.stringify(votes));
-          return true;
-        } catch (error) {
-          console.error("Could not save Gearboard votes.", error);
-          showToast("Your vote could not be saved.");
-          return false;
-        }
-      }
-
       function escapeHTML(value) {
         return String(value).replace(/[&<>"']/g, character => ({
           "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
@@ -594,6 +536,114 @@
         toast.classList.add("show");
         window.clearTimeout(toastTimer);
         toastTimer = window.setTimeout(() => toast.classList.remove("show"), 2800);
+      }
+
+      function displayFeedError(message) {
+        feedList.innerHTML = `<div class="empty-state"><strong>Couldn’t load the community feed.</strong><p>${escapeHTML(message)}</p><button class="button button-primary" type="button" data-action="retry-feed">Try again</button></div>`;
+      }
+
+      async function refreshFeed() {
+        if (!supabaseClient) return;
+        const { data: postRows, error: postsError } = await supabaseClient
+          .from("gear_posts").select("*").order("created_at", { ascending: false });
+        if (postsError) throw postsError;
+
+        const postIds = postRows.map(post => post.id);
+        let commentRows = [];
+        if (postIds.length) {
+          const { data, error } = await supabaseClient
+            .from("gear_comments").select("*").in("post_id", postIds).order("created_at");
+          if (error) throw error;
+          commentRows = data;
+        }
+
+        const { data: voteRows, error: votesError } = await supabaseClient
+          .from("gear_votes").select("post_id,value").eq("owner_id", ownerId);
+        if (votesError) throw votesError;
+
+        const commentsByPost = new Map();
+        commentRows.forEach(comment => {
+          if (!commentsByPost.has(comment.post_id)) commentsByPost.set(comment.post_id, []);
+          commentsByPost.get(comment.post_id).push({
+            author: comment.author,
+            text: comment.text,
+            createdAt: Date.parse(comment.created_at)
+          });
+        });
+        posts = postRows.map(post => ({
+          id: post.id,
+          ownerId: post.owner_id,
+          author: post.author,
+          title: post.title,
+          image: post.image,
+          body: post.body,
+          score: post.score,
+          createdAt: Date.parse(post.created_at),
+          comments: commentsByPost.get(post.id) || []
+        }));
+        votes = Object.fromEntries(voteRows.map(vote => [vote.post_id, vote.value === 1 ? "up" : "down"]));
+        renderPosts();
+        checkSavedPostImages();
+      }
+
+      function checkSavedPostImages() {
+        const imageURLs = new Set(posts.map(post => safeImageURL(post.image)).filter(Boolean));
+        imageURLs.forEach(image => {
+          if (imageSafety.has(image)) return;
+          imageSafety.set(image, "checking");
+          checkImageSafety(image)
+            .then(renderPosts)
+            .catch(error => {
+              console.warn("Saved image could not be checked and was hidden.", error);
+              renderPosts();
+            });
+        });
+        if (imageURLs.size) renderPosts();
+      }
+
+      function initializeBackend() {
+        if (backendReady) return Promise.resolve();
+        if (backendInitialization) return backendInitialization;
+        feedList.innerHTML = '<div class="empty-state"><strong>Loading the community feed…</strong></div>';
+        backendInitialization = (async () => {
+          await loadScript("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js", "supabase");
+          supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+          let { data: { session }, error } = await supabaseClient.auth.getSession();
+          if (error) throw error;
+          if (!session) {
+            const result = await supabaseClient.auth.signInAnonymously();
+            if (result.error) throw result.error;
+            session = result.data.session;
+          }
+          if (!session?.user?.id) throw new Error("Anonymous sign-in did not return a user.");
+          ownerId = session.user.id;
+          await refreshFeed();
+          supabaseClient.channel("gearboard-live-feed")
+            .on("postgres_changes", { event: "*", schema: "public", table: "gear_posts" }, refreshFeedSafely)
+            .on("postgres_changes", { event: "*", schema: "public", table: "gear_comments" }, refreshFeedSafely)
+            .on("postgres_changes", { event: "*", schema: "public", table: "gear_votes" }, refreshFeedSafely)
+            .subscribe();
+          backendReady = true;
+        })().catch(error => {
+          console.error("Could not connect to the shared GearHub database.", error);
+          const message = error.message === "Anonymous sign-ins are disabled"
+            ? "Enable Anonymous sign-ins in Supabase Authentication, then run supabase-setup.sql in the SQL Editor."
+            : `${error.message || "Could not connect."} Check that Anonymous sign-ins are enabled and supabase-setup.sql has been run in your Supabase project.`;
+          displayFeedError(message);
+          showToast("The shared feed is unavailable.");
+        }).finally(() => {
+          backendInitialization = null;
+        });
+        return backendInitialization;
+      }
+
+      async function refreshFeedSafely() {
+        try {
+          await refreshFeed();
+        } catch (error) {
+          console.error("Could not refresh the shared GearHub feed.", error);
+          showToast("The feed could not be refreshed.");
+        }
       }
 
       function applyTheme(theme) {
@@ -862,13 +912,13 @@
           return;
         }
 
-        const post = {
-          id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
-          author, title, image, body, score: 0, comments: [], createdAt: Date.now(), ownerId
-        };
-        posts.unshift(post);
-        if (!savePosts()) {
-          posts.shift();
+        const { error } = await supabaseClient.from("gear_posts").insert({
+          author, title, image, body, owner_id: ownerId
+        });
+        if (error) {
+          console.error("Could not publish GearHub post.", error);
+          formError.textContent = error.message || "Could not publish this post. Please try again.";
+          formError.classList.add("visible");
           return;
         }
         postForm.reset();
@@ -876,15 +926,20 @@
         closeModal();
         sortSelect.value = "new";
         searchInput.value = "";
-        renderPosts();
+        await refreshFeedSafely();
         showToast("Your story is live!");
       });
 
-      feedList.addEventListener("click", event => {
+      feedList.addEventListener("click", async event => {
         const button = event.target.closest("button[data-action]");
         if (!button) return;
         if (button.dataset.action === "new-post") {
           openModal();
+          return;
+        }
+        if (button.dataset.action === "retry-feed") {
+          feedList.innerHTML = '<div class="empty-state"><strong>Loading the community feed…</strong></div>';
+          initializeBackend();
           return;
         }
         const card = button.closest("[data-post-id]");
@@ -900,17 +955,14 @@
             return;
           }
           if (!window.confirm("Delete this post? This can’t be undone.")) return;
-          const originalIndex = posts.indexOf(post);
-          posts.splice(originalIndex, 1);
-          if (!savePosts()) {
-            posts.splice(originalIndex, 0, post);
-            renderPosts();
+          const { error } = await supabaseClient.from("gear_posts").delete().eq("id", post.id);
+          if (error) {
+            console.error("Could not delete GearHub post.", error);
+            showToast(error.message || "Could not delete this post.");
             return;
           }
-          delete votes[post.id];
-          if (!saveVotes()) console.warn("The deleted post's saved vote could not be removed.");
           if (activeCommentPost === post.id) activeCommentPost = null;
-          renderPosts();
+          await refreshFeedSafely();
           showToast("Post deleted.");
           return;
         }
@@ -918,27 +970,22 @@
         if (button.dataset.action === "vote") {
           const previousVote = votes[post.id] || "";
           const nextVote = previousVote === button.dataset.vote ? "" : button.dataset.vote;
-          const voteValue = value => value === "up" ? 1 : value === "down" ? -1 : 0;
-          post.score = (Number(post.score) || 0) - voteValue(previousVote) + voteValue(nextVote);
-          votes[post.id] = nextVote;
-          if (savePosts() && saveVotes()) renderPosts();
+          const value = nextVote === "up" ? 1 : nextVote === "down" ? -1 : null;
+          const { error } = await supabaseClient.rpc("cast_gear_vote", {
+            p_post_id: post.id,
+            p_value: value
+          });
+          if (error) {
+            console.error("Could not save GearHub vote.", error);
+            showToast(error.message || "Your vote could not be saved.");
+            return;
+          }
+          await refreshFeedSafely();
           return;
         }
         if (button.dataset.action === "comments") {
           activeCommentPost = activeCommentPost === post.id ? null : post.id;
           renderPosts();
-          posts.forEach(post => {
-            const image = safeImageURL(post.image);
-            if (!image || imageSafety.has(image)) return;
-            imageSafety.set(image, "checking");
-            renderPosts();
-            checkImageSafety(image)
-              .then(renderPosts)
-              .catch(error => {
-                console.warn("Saved image could not be checked and was hidden.", error);
-                renderPosts();
-              });
-          });
           if (activeCommentPost) {
             const input = feedList.querySelector(`[data-post-id="${CSS.escape(post.id)}"] .comment-input`);
             if (input) input.focus();
@@ -960,19 +1007,23 @@
         }
       }
 
-      function savePendingComment(author) {
+      async function savePendingComment(author) {
         if (!pendingComment) return;
         const { post, text } = pendingComment;
-        const comment = { author: author || "Anonymous", text, createdAt: Date.now() };
-        if (!Array.isArray(post.comments)) post.comments = [];
-        post.comments.push(comment);
-        if (!savePosts()) {
-          post.comments.pop();
+        const { error } = await supabaseClient.from("gear_comments").insert({
+          post_id: post.id,
+          owner_id: ownerId,
+          author: author || "Anonymous",
+          text
+        });
+        if (error) {
+          console.error("Could not save GearHub comment.", error);
+          showToast(error.message || "Your comment could not be saved.");
           return;
         }
         activeCommentPost = post.id;
         closeCommentNameModal();
-        renderPosts();
+        await refreshFeedSafely();
         showToast("Comment added.");
       }
 
@@ -1009,6 +1060,7 @@
       });
 
       renderPosts();
+      initializeBackend();
     })();
   </script>
 </body>
