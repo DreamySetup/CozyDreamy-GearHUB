@@ -1,0 +1,1015 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#f4f2eb" id="themeColorMeta">
+  <title>GearHub — CozyDreamy Community</title>
+  <script>
+    try {
+      const savedTheme = localStorage.getItem("gearboard.theme.v1");
+      if (savedTheme === "dark" || savedTheme === "light") {
+        document.documentElement.dataset.theme = savedTheme;
+      }
+    } catch (error) {
+      console.warn("Could not load saved Gearboard theme.", error);
+    }
+  </script>
+  <style>
+    :root {
+      color-scheme: light;
+      --paper: #f4f2eb;
+      --surface: #fbfaf6;
+      --surface-soft: #efede5;
+      --field-bg: #fbfaf6;
+      --ink: #302f29;
+      --muted: #77766c;
+      --muted-strong: #625f55;
+      --line: #e5e1d6;
+      --accent: #fbce93;
+      --accent-dark: #fbc681;
+      --green: #55806a;
+      --shadow: 0 7px 22px rgba(57, 48, 36, .045);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    :root[data-theme="dark"] {
+      color-scheme: dark;
+      --paper: #211f1b;
+      --surface: #2d2a26;
+      --surface-soft: #39352f;
+      --field-bg: #26231f;
+      --ink: #eee8dc;
+      --muted: #b2aa9e;
+      --muted-strong: #d0c7b9;
+      --line: #443f37; 
+      --accent: #fbce93;
+      --accent-dark: #fbc681;
+      --green: #8fc3a2;
+      --shadow: 0 8px 26px rgba(0, 0, 0, .14);
+    }
+
+    * { box-sizing: border-box; }
+    html { background: var(--paper); }
+    body { margin: 0; min-width: 320px; color: var(--ink); background: var(--paper); transition: color .2s ease, background .25s ease; }
+    button, input, textarea, select { font: inherit; }
+    button { color: inherit; }
+    .shell { display: flex; min-height: 100vh; flex-direction: column; }
+
+    .topbar {
+      position: sticky; top: 0; z-index: 5; height: 72px;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 max(24px, calc((100vw - 1120px) / 2));
+      background: color-mix(in srgb, var(--surface) 92%, transparent); border-bottom: 1px solid var(--line);
+      backdrop-filter: blur(14px);
+    }
+    .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--ink); }
+    .brand-mark {
+      display: block; width: 36px; height: 36px; flex: 0 0 auto;
+      border: 1px solid var(--line); border-radius: 50%; object-fit: cover;
+    }
+    .brand-name { font-size: 17px; font-weight: 750; letter-spacing: -.5px; }
+    .brand-name span { color: var(--accent); }
+    .top-actions { display: flex; align-items: center; gap: 12px; }
+    .quiet-note { color: var(--muted); font-size: 13px; }
+
+    .button {
+      border: 0; border-radius: 9px; padding: 10px 14px; cursor: pointer;
+      font-size: 13px; font-weight: 700; transition: transform .18s ease, background .18s ease, box-shadow .18s ease;
+    }
+    .button:hover { transform: translateY(-1px); }
+    .button:active { transform: translateY(0) scale(.98); }
+    .button-primary { color: #fffaf4; background: var(--accent); }
+    .button-primary:hover { background: var(--accent-dark); }
+    .button-subtle { color: var(--muted-strong); background: var(--surface-soft); }
+    .theme-toggle {
+      display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+      min-height: 38px; padding: 0 11px; border: 1px solid var(--line); border-radius: 9px;
+      color: var(--muted-strong); background: var(--surface); font-size: 12px; font-weight: 650; cursor: pointer;
+      transition: background .2s ease, border-color .2s ease, color .2s ease, transform .18s ease;
+    }
+    .theme-toggle:hover { border-color: var(--accent); color: var(--ink); transform: translateY(-1px); }
+    .theme-toggle:active { transform: scale(.97); }
+    .theme-icon { display: inline-block; font-size: 15px; line-height: 1; transition: transform .3s ease; }
+    .theme-toggle:hover .theme-icon { transform: rotate(-12deg); }
+
+    .layout {
+      display: grid; grid-template-columns: minmax(0, 700px) 260px; gap: 32px;
+      width: 100%; max-width: 1040px; padding: 42px 24px 80px; margin: 0 auto; align-items: start; flex: 1;
+    }
+    .site-footer {
+      min-height: 72px; padding: 16px 24px; border-top: 1px solid var(--line);
+      color: var(--muted); font-size: 11px;
+    }
+    .footer-inner {
+      display: flex; align-items: center; justify-content: space-between; gap: 20px;
+      width: 100%; max-width: 1040px; margin: 0 auto;
+    }
+    .footer-credit { display: flex; align-items: center; gap: 8px; }
+    .footer-dot { width: 4px; height: 4px; border-radius: 50%; background: var(--accent); }
+    .footer-tagline { color: var(--muted); }
+    .footer-link {
+      display: inline-flex; align-items: center; gap: 7px; color: var(--muted-strong);
+      font-weight: 650; text-decoration: none; transition: color .18s ease, gap .18s ease;
+    }
+    .footer-link:hover { color: var(--accent-dark); gap: 10px; }
+    .footer-arrow { color: var(--muted); font-size: 13px; transition: transform .18s ease; }
+    .footer-link:hover .footer-arrow { transform: translate(2px, -2px); }
+    .feed-column { min-width: 0; }
+    .intro { margin-bottom: 28px; }
+    .eyebrow {
+      color: var(--accent-dark); font-size: 10px; font-weight: 750; letter-spacing: 1.35px;
+      text-transform: uppercase; margin-bottom: 12px;
+    }
+    h1 { margin: 0; font-family: Georgia, "Times New Roman", serif; font-size: clamp(34px, 5vw, 46px); font-weight: 500; line-height: 1.08; letter-spacing: -1.7px; }
+    .intro-copy { color: var(--muted); font-size: 14px; line-height: 1.7; margin: 12px 0 0; }
+    .compose-prompt {
+      display: flex; gap: 12px; align-items: center; width: 100%; padding: 13px;
+      border: 1px solid var(--line); border-radius: 12px; background: var(--surface);
+      text-align: left; cursor: pointer; box-shadow: var(--shadow); margin-bottom: 25px;
+      transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease, background .2s ease;
+    }
+    .compose-prompt:hover { transform: translateY(-2px); border-color: color-mix(in srgb, var(--accent) 48%, var(--line)); box-shadow: 0 10px 25px rgba(57, 48, 36, .08); }
+    .compose-prompt:active { transform: translateY(0) scale(.995); }
+    .compose-avatar, .avatar {
+      flex: 0 0 auto; display: grid; place-items: center; width: 38px; height: 38px;
+      border-radius: 50%; background: var(--surface-soft); color: var(--accent-dark); font-size: 15px; font-weight: 750;
+    }
+    .prompt-text { flex: 1; color: var(--muted); font-size: 13px; }
+    .prompt-plus {
+      display: grid; place-items: center; width: 32px; height: 32px; border-radius: 9px;
+      color: #fffaf4; background: var(--accent); font-size: 21px; font-weight: 400;
+      transition: transform .2s ease;
+    }
+    .compose-prompt:hover .prompt-plus { transform: rotate(90deg); }
+    .feed-tools { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 15px; }
+    .feed-heading { margin: 0; font-size: 15px; font-weight: 750; letter-spacing: -.2px; }
+    .tool-controls { display: flex; gap: 8px; }
+    .search-wrap { position: relative; }
+    .search-icon { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
+    .search-input, .sort-select {
+      height: 38px; border: 1px solid var(--line); border-radius: 9px; background: var(--surface);
+      color: var(--ink); outline: none; font-size: 13px;
+    }
+    .search-input { width: 165px; padding: 0 10px 0 32px; }
+    .sort-select { padding: 0 10px; cursor: pointer; }
+    .search-input:focus, .sort-select:focus, .field:focus, .textarea:focus, .comment-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 14%, transparent); }
+    .feed-list { display: grid; gap: 14px; }
+    .post-card {
+      overflow: hidden; border: 1px solid var(--line); border-radius: 12px;
+      background: var(--surface); box-shadow: var(--shadow);
+      transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease, background .2s ease;
+    }
+    .post-card:hover { transform: translateY(-2px); border-color: color-mix(in srgb, var(--accent) 34%, var(--line)); box-shadow: 0 10px 27px rgba(57, 48, 36, .075); }
+    .post-inner { padding: 19px 20px 16px; }
+    .post-meta { display: flex; align-items: center; gap: 10px; margin-bottom: 13px; }
+    .post-meta .avatar { width: 34px; height: 34px; font-size: 13px; }
+    .author-line { min-width: 0; }
+    .author-name { display: block; font-size: 13px; font-weight: 750; }
+    .post-date { color: var(--muted); font-size: 11px; margin-top: 3px; }
+    .category-pill {
+      margin-left: auto; border-radius: 20px; padding: 5px 9px; color: var(--muted-strong);
+      background: var(--surface-soft); font-size: 10px; font-weight: 700; white-space: nowrap;
+    }
+    .post-title { margin: 0 0 8px; font-family: Georgia, "Times New Roman", serif; font-size: 19px; font-weight: 500; line-height: 1.35; letter-spacing: -.25px; }
+    .post-body { margin: 0; color: var(--muted-strong); font-size: 13px; line-height: 1.7; white-space: pre-wrap; overflow-wrap: anywhere; }
+    .post-image {
+      display: block; width: 100%; max-height: 390px; object-fit: cover; background: var(--surface-soft);
+      border-top: 1px solid var(--line);
+      animation: image-appear .35s ease both;
+    }
+    .post-footer { display: flex; align-items: center; gap: 8px; padding: 11px 18px; border-top: 1px solid var(--line); }
+    .vote-control { display: flex; align-items: center; gap: 2px; padding: 3px; border-radius: 9px; background: var(--surface-soft); }
+    .vote-button {
+      display: grid; place-items: center; width: 29px; height: 27px; border: 0; border-radius: 7px;
+      color: var(--muted); background: transparent; font-size: 14px; cursor: pointer;
+      transition: color .16s ease, background .16s ease, transform .16s ease;
+    }
+    .vote-button:hover { color: var(--accent-dark); background: var(--surface); }
+    .vote-button:active { transform: scale(.88); }
+    .vote-button.active.up { color: var(--green); }
+    .vote-button.active.down { color: #d55f50; }
+    .score { min-width: 22px; text-align: center; font-size: 12px; font-weight: 800; }
+    .comment-toggle {
+      display: flex; align-items: center; gap: 7px; min-height: 34px; padding: 0 10px;
+      border: 0; border-radius: 9px; color: var(--muted); background: transparent; font-size: 12px; font-weight: 700; cursor: pointer;
+      transition: color .16s ease, background .16s ease, transform .16s ease;
+    }
+    .comment-toggle:hover, .comment-toggle[aria-expanded="true"] { background: var(--surface-soft); color: var(--ink); }
+    .comment-toggle:active { transform: scale(.97); }
+    .delete-post {
+      margin-left: auto; padding: 7px 9px; border: 0; border-radius: 8px;
+      color: var(--muted); background: transparent; font-size: 11px; font-weight: 650; cursor: pointer;
+      transition: color .16s ease, background .16s ease;
+    }
+    .delete-post:hover { color: #a84c42; background: var(--surface-soft); }
+    .comments { padding: 0 20px 17px; animation: content-appear .2s ease both; }
+    .comment-list { display: grid; gap: 12px; margin: 2px 0 15px; }
+    .comment { padding-left: 12px; border-left: 2px solid var(--line); }
+    .comment-head { display: flex; gap: 8px; align-items: baseline; margin-bottom: 4px; }
+    .comment-author { font-size: 11px; font-weight: 800; }
+    .comment-date { color: var(--muted); font-size: 10px; }
+    .comment-text { margin: 0; color: var(--muted-strong); font-size: 12px; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; }
+    .comment-form { display: flex; gap: 8px; }
+    .comment-input { flex: 1; min-width: 0; height: 38px; padding: 0 11px; border: 1px solid var(--line); border-radius: 9px; outline: none; color: var(--ink); background: var(--field-bg); font-size: 12px; }
+    .comment-send { padding: 0 12px; border: 0; border-radius: 9px; color: var(--paper); background: var(--ink); font-size: 12px; font-weight: 750; cursor: pointer; }
+    .name-prompt-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 8px; margin-top: 17px; }
+
+    .sidebar { position: sticky; top: 98px; }
+    .side-card { padding: 19px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); box-shadow: var(--shadow); }
+    .side-card + .side-card { margin-top: 13px; }
+    .side-title { margin: 0 0 10px; font-size: 14px; letter-spacing: -.2px; }
+    .side-copy { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.7; }
+    .rules { display: grid; gap: 12px; padding: 0; margin: 14px 0 0; list-style: none; }
+    .rules li { display: flex; align-items: flex-start; gap: 9px; color: var(--muted-strong); font-size: 11px; line-height: 1.5; }
+    .rule-number { display: grid; place-items: center; flex: 0 0 19px; height: 19px; border-radius: 6px; color: var(--accent-dark); background: var(--surface-soft); font-size: 10px; font-weight: 800; }
+    .privacy-mark { display: inline-flex; align-items: center; gap: 7px; margin-bottom: 9px; color: var(--green); font-size: 11px; font-weight: 800; }
+    .privacy-dot { width: 7px; height: 7px; border-radius: 50%; background: #63ad83; }
+    .empty-state { padding: 42px 20px; border: 1px dashed var(--line); border-radius: 12px; text-align: center; background: var(--surface); }
+    .empty-icon { margin-bottom: 8px; font-size: 27px; }
+    .empty-state strong { display: block; font-size: 14px; }
+    .empty-state p { margin: 6px 0 14px; color: var(--muted); font-size: 12px; }
+    .storage-note { color: var(--muted); font-size: 10px; line-height: 1.55; margin: 16px 2px 0; }
+
+    .modal-backdrop {
+      display: none; position: fixed; z-index: 10; inset: 0; align-items: center; justify-content: center;
+      padding: 20px; background: rgba(21,24,22,.48); backdrop-filter: blur(4px);
+    }
+    .modal-backdrop.open { display: flex; animation: backdrop-appear .2s ease both; }
+    .modal { width: min(100%, 540px); max-height: min(90vh, 760px); overflow-y: auto; padding: 24px; border: 1px solid var(--line); border-radius: 14px; color: var(--ink); background: var(--surface); box-shadow: 0 24px 80px rgba(0,0,0,.2); }
+    .modal-backdrop.open .modal { animation: modal-appear .24s cubic-bezier(.2,.75,.25,1) both; }
+    .modal-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 20px; }
+    .modal-title { margin: 0; font-size: 22px; letter-spacing: -.7px; }
+    .modal-description { margin: 6px 0 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
+    .close-button { width: 32px; height: 32px; border: 0; border-radius: 8px; color: var(--muted); background: var(--surface-soft); font-size: 20px; cursor: pointer; }
+    .form-grid { display: grid; gap: 15px; }
+    .field-group { display: grid; gap: 6px; }
+    .field-label { font-size: 12px; font-weight: 750; }
+    .optional { color: var(--muted); font-size: 10px; font-weight: 500; }
+    .field, .textarea {
+      width: 100%; border: 1px solid var(--line); border-radius: 9px; outline: none;
+      padding: 11px 12px; color: var(--ink); background: var(--field-bg); font-size: 13px;
+    }
+    .textarea { min-height: 130px; resize: vertical; line-height: 1.55; }
+    .field-hint { color: var(--muted); font-size: 10px; }
+    .image-review {
+      display: flex; align-items: center; gap: 9px; padding: 12px;
+      border: 1px solid var(--line); border-radius: 9px; color: var(--muted-strong);
+      background: var(--surface-soft); font-size: 12px; line-height: 1.5;
+    }
+    .image-review[hidden] { display: none; }
+    .image-review-icon { flex: 0 0 auto; font-size: 15px; }
+    .image-placeholder {
+      display: grid; place-items: center; min-height: 76px; padding: 14px;
+      border-top: 1px solid var(--line); color: var(--muted); background: var(--surface-soft);
+      font-size: 12px; text-align: center;
+    }
+    .form-error { display: none; color: #bf3f31; font-size: 12px; }
+    .form-error.visible { display: block; }
+    .form-actions { display: flex; justify-content: flex-end; gap: 9px; padding-top: 3px; }
+    .toast {
+      position: fixed; z-index: 20; right: 22px; bottom: 22px; padding: 12px 16px;
+      border-radius: 11px; color: white; background: #252a27; box-shadow: 0 8px 30px rgba(0,0,0,.2);
+      font-size: 13px; opacity: 0; transform: translateY(10px); pointer-events: none; transition: .2s;
+    }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    @keyframes content-appear {
+      from { opacity: 0; transform: translateY(5px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes backdrop-appear {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    @keyframes modal-appear {
+      from { opacity: 0; transform: translateY(8px) scale(.985); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    @keyframes image-appear {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    .intro { animation: content-appear .45s ease both; }
+    .sidebar .side-card { animation: content-appear .4s ease both; }
+    .sidebar .side-card:nth-child(2) { animation-delay: .08s; }
+
+    @media (max-width: 820px) {
+      .layout { grid-template-columns: minmax(0, 1fr); max-width: 700px; padding-top: 32px; }
+      .sidebar { position: static; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+      .side-card + .side-card { margin-top: 0; }
+    }
+    @media (max-width: 540px) {
+      .topbar { height: 62px; padding: 0 16px; }
+      .quiet-note { display: none; }
+      .topbar .button { padding: 9px 12px; font-size: 12px; }
+      .top-actions { gap: 7px; }
+      .theme-toggle { width: 36px; min-height: 36px; padding: 0; }
+      .theme-toggle .theme-label { display: none; }
+      .site-footer { padding: 17px 16px; }
+      .footer-inner { align-items: flex-start; flex-direction: column; gap: 10px; }
+      .footer-credit { flex-wrap: wrap; }
+      .layout { padding: 29px 14px 50px; gap: 25px; }
+      h1 { letter-spacing: -1.8px; }
+      .feed-tools { align-items: flex-start; flex-direction: column; }
+      .tool-controls { width: 100%; }
+      .search-wrap { flex: 1; }
+      .search-input { width: 100%; }
+      .sort-select { flex: 0 0 auto; }
+      .post-inner { padding: 16px 15px 14px; }
+      .post-title { font-size: 17px; }
+      .comments { padding: 0 15px 15px; }
+      .sidebar { grid-template-columns: 1fr; }
+      .modal { padding: 20px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        scroll-behavior: auto !important;
+        animation-duration: .01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: .01ms !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header class="topbar">
+      <a class="brand" href="#" aria-label="CozyDreamy">
+        <img class="brand-mark" src="dreamy-setup-profile.jpeg" alt="CozyDreamy TikTok profile picture" width="36" height="36">
+        <span class="brand-name">Cozy<span>Dreamy</span></span>
+      </a>
+      <div class="top-actions">
+        <span class="quiet-note">Good gear. Fresh takes. No sign-up.</span>
+        <button class="theme-toggle" id="themeToggle" type="button" aria-label="Switch to dark mode">
+          <span class="theme-icon" id="themeIcon" aria-hidden="true">☾</span>
+          <span class="theme-label" id="themeLabel">Dark mode</span>
+        </button>
+        <button class="button button-primary" id="topPostButton" type="button">＋ &nbsp;Post a gear story</button>
+      </div>
+    </header>
+
+    <main class="layout">
+      <section class="feed-column" aria-label="Gear news feed">
+        <div class="intro">
+          <div class="eyebrow">The community gear feed</div>
+          <h1>Gear worth<br>talking about.</h1>
+          <p class="intro-copy">The latest drops, honest opinions, and setup discoveries from people who love their gear.</p>
+        </div>
+
+        <button class="compose-prompt" id="composePrompt" type="button">
+          <span class="compose-avatar" aria-hidden="true">✳</span>
+          <span class="prompt-text">What gear are you thinking about?</span>
+          <span class="prompt-plus" aria-hidden="true">+</span>
+        </button>
+
+        <div class="feed-tools">
+          <h2 class="feed-heading">Fresh from the community <span id="postCount"></span></h2>
+          <div class="tool-controls">
+            <label class="search-wrap">
+              <span class="search-icon" aria-hidden="true">⌕</span>
+              <input class="search-input" id="searchInput" type="search" placeholder="Search the feed" aria-label="Search posts">
+            </label>
+            <select class="sort-select" id="sortSelect" aria-label="Sort posts">
+              <option value="new">Newest</option>
+              <option value="top">Top voted</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="feed-list" id="feedList" aria-live="polite"></div>
+        <p class="storage-note">Posts and votes are saved in this browser on this device. Posts created here can be deleted from this browser for 5 hours. No account, tracking, or server required.</p>
+      </section>
+
+      <aside class="sidebar" aria-label="About Gearboard">
+        <section class="side-card">
+          <h2 class="side-title">A little corner for gearheads.</h2>
+          <p class="side-copy">Share a new release, show off your setup, or tell everyone what you really think. It’s your feed.</p>
+          <ul class="rules">
+            <li><span class="rule-number">1</span><span>Post gaming gear news and opinions.</span></li>
+            <li><span class="rule-number">2</span><span>Upvote the stories you want to see.</span></li>
+            <li><span class="rule-number">3</span><span>Keep it kind. Keep it about gear.</span></li>
+          </ul>
+        </section>
+        <section class="side-card">
+          <div class="privacy-mark"><span class="privacy-dot"></span> OPEN BY DESIGN</div>
+          <h2 class="side-title">No account needed.</h2>
+          <p class="side-copy">Pick a display name or stay anonymous. Just jump in and join the conversation.</p>
+        </section>
+      </aside>
+    </main>
+    <footer class="site-footer">
+      <div class="footer-inner">
+        <div class="footer-credit">
+          <span>© 2026 CozyDreamy</span>
+          <span class="footer-dot" aria-hidden="true"></span>
+          <span class="footer-tagline">A cozy corner for gearheads.</span>
+        </div>
+        <a class="footer-link" href="https://www.tiktok.com/@dreamy.setupvn" target="_blank" rel="noopener noreferrer">
+          <span>TikTok · @dreamy.setupvn</span>
+          <span class="footer-arrow" aria-hidden="true">↗</span>
+        </a>
+      </div>
+    </footer>
+  </div>
+
+  <div class="modal-backdrop" id="postModal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal">
+      <div class="modal-header">
+        <div>
+          <h2 class="modal-title" id="modalTitle">Share a gear story</h2>
+          <p class="modal-description">Got a new find, a hot take, or a setup upgrade? Put it out there.</p>
+        </div>
+        <button class="close-button" id="closeModalButton" type="button" aria-label="Close">×</button>
+      </div>
+      <form class="form-grid" id="postForm">
+        <div class="field-group">
+          <label class="field-label" for="authorInput">Your name <span class="optional">optional</span></label>
+          <input class="field" id="authorInput" maxlength="40" placeholder="Anonymous">
+        </div>
+        <div class="field-group">
+          <label class="field-label" for="titleInput">Title <span class="optional">optional</span></label>
+          <input class="field" id="titleInput" maxlength="120" placeholder="e.g. First look at the new Nova Pro headset">
+        </div>
+        <div class="field-group">
+          <label class="field-label" for="imageInput">Image URL <span class="optional">optional</span></label>
+          <input class="field" id="imageInput" type="url" maxlength="1000" placeholder="https://example.com/your-gear.jpg">
+          <span class="field-hint">The checker downloads its model from jsDelivr/GitHub and analyzes the image in your browser, not a moderation server. First use may take a while; checks can miss some adult images. The image host must allow browser access (CORS).</span>
+        </div>
+        <div class="image-review" id="imageReview" role="status" aria-live="polite" hidden>
+          <span class="image-review-icon" id="imageReviewIcon" aria-hidden="true"></span>
+          <span id="imageReviewText"></span>
+        </div>
+        <div class="field-group">
+          <label class="field-label" for="bodyInput">What’s the story? <span class="optional">optional</span></label>
+          <textarea class="textarea" id="bodyInput" maxlength="5000" placeholder="Share the details, your experience, or what makes this gear interesting..."></textarea>
+        </div>
+        <p class="form-error" id="formError" role="alert"></p>
+        <div class="form-actions">
+          <button class="button button-subtle" id="cancelPostButton" type="button">Cancel</button>
+          <button class="button button-primary" type="submit">Publish post</button>
+        </div>
+      </form>
+    </div>
+  </div>
+  <div class="modal-backdrop" id="commentNameModal" role="dialog" aria-modal="true" aria-labelledby="commentNameTitle" aria-describedby="commentNameDescription">
+    <div class="modal">
+      <div class="modal-header">
+        <div>
+          <h2 class="modal-title" id="commentNameTitle">Add your name to the comments?</h2>
+          <p class="modal-description" id="commentNameDescription">Your name will appear next to this comment. You can also post anonymously.</p>
+        </div>
+        <button class="close-button" id="closeCommentNameModal" type="button" aria-label="Close">×</button>
+      </div>
+      <form id="commentNameForm">
+        <div class="field-group">
+          <label class="field-label" for="commentNameInput">Your name <span class="optional">optional</span></label>
+          <input class="field" id="commentNameInput" maxlength="40" placeholder="Leave blank to post anonymously">
+        </div>
+        <div class="name-prompt-actions">
+          <button class="button button-subtle" id="cancelCommentName" type="button">Cancel</button>
+          <button class="button button-subtle" id="postAnonymous" type="button">Post anonymously</button>
+          <button class="button button-primary" type="submit">Post comment</button>
+        </div>
+      </form>
+    </div>
+  </div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    (() => {
+      "use strict";
+
+      const STORAGE_KEY = "gearboard.posts.v1";
+      const VOTES_KEY = "gearboard.votes.v1";
+      const OWNER_KEY = "gearboard.owner.v1";
+      const DELETE_WINDOW_MS = 5 * 60 * 60 * 1000;
+      const IMAGE_MODEL_THRESHOLD = 0.35;
+      const feedList = document.getElementById("feedList");
+      const postModal = document.getElementById("postModal");
+      const commentNameModal = document.getElementById("commentNameModal");
+      const commentNameForm = document.getElementById("commentNameForm");
+      const commentNameInput = document.getElementById("commentNameInput");
+      const postForm = document.getElementById("postForm");
+      const formError = document.getElementById("formError");
+      const imageInput = document.getElementById("imageInput");
+      const imageReview = document.getElementById("imageReview");
+      const imageReviewIcon = document.getElementById("imageReviewIcon");
+      const imageReviewText = document.getElementById("imageReviewText");
+      const searchInput = document.getElementById("searchInput");
+      const sortSelect = document.getElementById("sortSelect");
+      const postCount = document.getElementById("postCount");
+      const themeToggle = document.getElementById("themeToggle");
+      const themeIcon = document.getElementById("themeIcon");
+      const themeLabel = document.getElementById("themeLabel");
+      const themeColorMeta = document.getElementById("themeColorMeta");
+      const toast = document.getElementById("toast");
+      let posts = readStoredArray(STORAGE_KEY);
+      let votes = readStoredObject(VOTES_KEY);
+      let toastTimer;
+      let activeCommentPost = null;
+      let pendingComment = null;
+      let moderationModelPromise = null;
+      const imageSafety = new Map();
+      const imageChecks = new Map();
+      let ownerId = getOwnerId();
+
+      function getOwnerId() {
+        try {
+          let id = localStorage.getItem(OWNER_KEY);
+          if (!id) {
+            id = typeof crypto.randomUUID === "function"
+              ? crypto.randomUUID()
+              : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+            localStorage.setItem(OWNER_KEY, id);
+          }
+          return id;
+        } catch (error) {
+          console.error("Could not load this browser's post ownership key.", error);
+          return null;
+        }
+      }
+
+      function readStoredArray(key) {
+        try {
+          const value = JSON.parse(localStorage.getItem(key) || "[]");
+          return Array.isArray(value) ? value.filter(post => post && typeof post.id === "string") : [];
+        } catch (error) {
+          console.error("Could not read saved Gearboard posts.", error);
+          showToast("Saved posts could not be loaded.");
+          return [];
+        }
+      }
+
+      function readStoredObject(key) {
+        try {
+          const value = JSON.parse(localStorage.getItem(key) || "{}");
+          return value && typeof value === "object" && !Array.isArray(value) ? value : {};
+        } catch (error) {
+          console.error("Could not read saved Gearboard votes.", error);
+          return {};
+        }
+      }
+
+      function savePosts() {
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(posts));
+          return true;
+        } catch (error) {
+          console.error("Could not save Gearboard posts.", error);
+          showToast("Could not save. Browser storage may be full.");
+          return false;
+        }
+      }
+
+      function saveVotes() {
+        try {
+          localStorage.setItem(VOTES_KEY, JSON.stringify(votes));
+          return true;
+        } catch (error) {
+          console.error("Could not save Gearboard votes.", error);
+          showToast("Your vote could not be saved.");
+          return false;
+        }
+      }
+
+      function escapeHTML(value) {
+        return String(value).replace(/[&<>"']/g, character => ({
+          "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+        })[character]);
+      }
+
+      function getInitial(name) {
+        const cleanName = String(name || "Anonymous").trim();
+        return escapeHTML(Array.from(cleanName)[0] || "A").toUpperCase();
+      }
+
+      function formatDate(timestamp) {
+        const date = new Date(timestamp);
+        if (Number.isNaN(date.getTime())) return "Recently";
+        return new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(date);
+      }
+
+      function showToast(message) {
+        toast.textContent = message;
+        toast.classList.add("show");
+        window.clearTimeout(toastTimer);
+        toastTimer = window.setTimeout(() => toast.classList.remove("show"), 2800);
+      }
+
+      function applyTheme(theme) {
+        document.documentElement.dataset.theme = theme;
+        const switchToDark = theme !== "dark";
+        themeIcon.textContent = switchToDark ? "☾" : "☀";
+        themeLabel.textContent = switchToDark ? "Dark mode" : "Light mode";
+        themeToggle.setAttribute("aria-label", `Switch to ${switchToDark ? "dark" : "light"} mode`);
+        themeColorMeta.setAttribute("content", theme === "dark" ? "#211f1b" : "#f4f2eb");
+      }
+
+      themeToggle.addEventListener("click", () => {
+        const nextTheme = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+        try {
+          localStorage.setItem("gearboard.theme.v1", nextTheme);
+        } catch (error) {
+          console.error("Could not save Gearboard theme.", error);
+          showToast("Your theme preference could not be saved.");
+          return;
+        }
+        applyTheme(nextTheme);
+      });
+      applyTheme(document.documentElement.dataset.theme === "dark" ? "dark" : "light");
+
+      function openModal() {
+        postModal.classList.add("open");
+        document.body.style.overflow = "hidden";
+        window.setTimeout(() => document.getElementById("authorInput").focus(), 30);
+      }
+
+      function closeModal() {
+        postModal.classList.remove("open");
+        document.body.style.overflow = "";
+        formError.classList.remove("visible");
+      }
+
+      function safeImageURL(rawValue) {
+        const value = String(rawValue || "").trim();
+        if (!value) return "";
+        try {
+          const url = new URL(value, window.location.href);
+          return ["http:", "https:"].includes(url.protocol) ? url.href : "";
+        } catch (_) {
+          return "";
+        }
+      }
+
+      function loadScript(src, globalName) {
+        if (window[globalName]) return Promise.resolve();
+        return new Promise((resolve, reject) => {
+          const script = document.createElement("script");
+          const timeout = window.setTimeout(() => {
+            script.remove();
+            reject(new Error(`Loading ${globalName} timed out.`));
+          }, 20000);
+          script.src = src;
+          script.async = true;
+          script.onload = () => {
+            window.clearTimeout(timeout);
+            window[globalName] ? resolve() : reject(new Error(`${globalName} did not load.`));
+          };
+          script.onerror = () => {
+            window.clearTimeout(timeout);
+            reject(new Error(`Could not load ${globalName}.`));
+          };
+          document.head.appendChild(script);
+        });
+      }
+
+      function loadModerationModel() {
+        if (!moderationModelPromise) {
+          moderationModelPromise = (async () => {
+            await loadScript("https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js", "tf");
+            window.tf.enableProdMode();
+            await loadScript("https://cdn.jsdelivr.net/npm/nsfwjs@4.0.0/dist/nsfwjs.min.js", "nsfwjs");
+            await window.tf.ready();
+            return window.nsfwjs.load("https://raw.githubusercontent.com/infinitered/nsfwjs/master/models/mobilenet_v2/model.json");
+          })().catch(error => {
+            moderationModelPromise = null;
+            throw error;
+          });
+        }
+        return moderationModelPromise;
+      }
+
+      function loadImageForModeration(url) {
+        return new Promise((resolve, reject) => {
+          const image = new Image();
+          image.crossOrigin = "anonymous";
+          image.referrerPolicy = "no-referrer";
+          image.onload = () => resolve(image);
+          image.onerror = () => reject(new Error("This image could not be checked. Use an image URL that allows browser access (CORS)."));
+          image.src = url;
+        });
+      }
+
+      async function checkImageSafety(url) {
+        if (imageChecks.has(url)) return imageChecks.get(url);
+        imageSafety.set(url, "checking");
+        let expired = false;
+        let timeout;
+        const work = (async () => {
+          const [model, image] = await Promise.all([loadModerationModel(), loadImageForModeration(url)]);
+          const predictions = await model.classify(image);
+          if (expired) throw new Error("Image safety check timed out.");
+          const adultClasses = new Set(["Porn", "Hentai", "Sexy"]);
+          const flagged = predictions.some(prediction =>
+            adultClasses.has(prediction.className) && prediction.probability >= IMAGE_MODEL_THRESHOLD);
+          return flagged ? "blocked" : "allowed";
+        })();
+        const check = Promise.race([
+          work,
+          new Promise((_, reject) => {
+            timeout = window.setTimeout(() => {
+              expired = true;
+              reject(new Error("Image safety check timed out."));
+            }, 90000);
+          })
+        ]).then(result => {
+          imageSafety.set(url, result);
+          return result;
+        }).catch(error => {
+          imageSafety.set(url, "error");
+          imageChecks.delete(url);
+          throw error;
+        }).finally(() => window.clearTimeout(timeout));
+        imageChecks.set(url, check);
+        return check;
+      }
+
+      function showImageReview(state, message) {
+        imageReview.hidden = !message;
+        imageReviewIcon.textContent = state === "allowed" ? "✓" : state === "blocked" || state === "error" ? "!" : "◌";
+        imageReviewText.textContent = message;
+      }
+
+      imageInput.addEventListener("input", () => {
+        showImageReview("", "");
+      });
+
+      function renderPosts() {
+        const query = searchInput.value.trim().toLowerCase();
+        const visiblePosts = posts.filter(post => {
+          const text = `${post.title || ""} ${post.body || ""} ${post.author || ""}`.toLowerCase();
+          return text.includes(query);
+        });
+
+        visiblePosts.sort((a, b) => sortSelect.value === "top"
+          ? (Number(b.score) || 0) - (Number(a.score) || 0) || Number(b.createdAt) - Number(a.createdAt)
+          : Number(b.createdAt) - Number(a.createdAt));
+
+        postCount.textContent = `(${visiblePosts.length})`;
+        if (!visiblePosts.length) {
+          const isSearching = Boolean(query);
+          feedList.innerHTML = `<div class="empty-state"><div class="empty-icon">${isSearching ? "⌕" : "✳"}</div><strong>${isSearching ? "No stories found" : "The feed is all yours."}</strong><p>${isSearching ? "Try a different search." : "Be the first to share something gear-worthy."}</p>${isSearching ? "" : '<button class="button button-primary" type="button" data-action="new-post">Share the first story</button>'}</div>`;
+          return;
+        }
+
+        feedList.innerHTML = visiblePosts.map(post => {
+          const vote = votes[post.id] || "";
+          const comments = Array.isArray(post.comments) ? post.comments : [];
+          const expanded = activeCommentPost === post.id;
+          const isOwner = Boolean(ownerId && post.ownerId === ownerId);
+          const withinDeleteWindow = Number.isFinite(Number(post.createdAt)) &&
+            Date.now() - Number(post.createdAt) >= 0 &&
+            Date.now() - Number(post.createdAt) < DELETE_WINDOW_MS;
+          const imageURL = safeImageURL(post.image);
+          const imageStatus = imageURL ? imageSafety.get(imageURL) : "";
+          let imageMarkup = "";
+          if (imageURL && imageStatus === "allowed") {
+            imageMarkup = `<img class="post-image" src="${escapeHTML(imageURL)}" alt="${escapeHTML(post.title || "Gaming gear image")}" loading="lazy" crossorigin="anonymous" referrerpolicy="no-referrer">`;
+          } else if (imageURL) {
+            const placeholder = imageStatus === "blocked"
+              ? "Image hidden — it may contain adult content."
+              : imageStatus === "error"
+                ? "Image hidden — it could not be checked."
+                : "Checking image before displaying…";
+            imageMarkup = `<div class="image-placeholder" role="status">${placeholder}</div>`;
+          }
+          return `<article class="post-card" data-post-id="${escapeHTML(post.id)}">
+            <div class="post-inner">
+              <div class="post-meta">
+                <span class="avatar" aria-hidden="true">${getInitial(post.author)}</span>
+                <div class="author-line"><span class="author-name">${escapeHTML(post.author || "Anonymous")}</span><span class="post-date">${escapeHTML(formatDate(post.createdAt))}</span></div>
+                <span class="category-pill">Gaming gear</span>
+              </div>
+              <h3 class="post-title">${escapeHTML(post.title || "Untitled gear drop")}</h3>
+              ${post.body ? `<p class="post-body">${escapeHTML(post.body)}</p>` : ""}
+            </div>
+            ${imageMarkup}
+            <div class="post-footer">
+              <div class="vote-control" aria-label="Vote on this post">
+                <button class="vote-button ${vote === "up" ? "active up" : ""}" type="button" data-action="vote" data-vote="up" aria-label="Upvote" aria-pressed="${vote === "up"}">▲</button>
+                <span class="score">${Number(post.score) || 0}</span>
+                <button class="vote-button ${vote === "down" ? "active down" : ""}" type="button" data-action="vote" data-vote="down" aria-label="Downvote" aria-pressed="${vote === "down"}">▼</button>
+              </div>
+              <button class="comment-toggle" type="button" data-action="comments" aria-expanded="${expanded}">▤ &nbsp;${comments.length} ${comments.length === 1 ? "comment" : "comments"}</button>
+              ${isOwner && withinDeleteWindow ? '<button class="delete-post" type="button" data-action="delete" aria-label="Delete your post within five hours">Delete</button>' : ""}
+            </div>
+            ${expanded ? `<section class="comments" aria-label="Comments">
+              <div class="comment-list">${comments.length ? comments.map(comment => `<div class="comment"><div class="comment-head"><span class="comment-author">${escapeHTML(comment.author || "Guest")}</span><span class="comment-date">${escapeHTML(formatDate(comment.createdAt))}</span></div><p class="comment-text">${escapeHTML(comment.text || "")}</p></div>`).join("") : '<p class="side-copy">No comments yet. Start the conversation.</p>'}</div>
+              <form class="comment-form" data-action="comment-form">
+                <input class="comment-input" name="comment" maxlength="800" placeholder="Add a comment..." aria-label="Write a comment" required>
+                <button class="comment-send" type="submit">Send</button>
+              </form>
+            </section>` : ""}
+          </article>`;
+        }).join("");
+      }
+
+      document.getElementById("topPostButton").addEventListener("click", openModal);
+      document.getElementById("composePrompt").addEventListener("click", openModal);
+      document.getElementById("closeModalButton").addEventListener("click", closeModal);
+      document.getElementById("cancelPostButton").addEventListener("click", closeModal);
+      postModal.addEventListener("click", event => {
+        if (event.target === postModal) closeModal();
+      });
+      document.addEventListener("keydown", event => {
+        if (event.key === "Escape" && postModal.classList.contains("open")) closeModal();
+        if (event.key === "Escape" && commentNameModal.classList.contains("open")) cancelCommentName();
+      });
+      searchInput.addEventListener("input", renderPosts);
+      sortSelect.addEventListener("change", renderPosts);
+
+      postForm.addEventListener("submit", async event => {
+        event.preventDefault();
+        const submitButton = postForm.querySelector('button[type="submit"]');
+        const author = document.getElementById("authorInput").value.trim() || "Anonymous";
+        const title = document.getElementById("titleInput").value.trim();
+        const imageValue = imageInput.value.trim();
+        const body = document.getElementById("bodyInput").value.trim();
+        const image = safeImageURL(imageValue);
+
+        if (imageValue && !image) {
+          formError.textContent = "Please enter a valid http or https image URL.";
+          formError.classList.add("visible");
+          return;
+        }
+
+        if (image) {
+          submitButton.disabled = true;
+          showImageReview("checking", "Checking the image on this device. The first check may take a moment.");
+          try {
+            const result = await checkImageSafety(image);
+            if (imageInput.value.trim() !== imageValue) {
+              showImageReview("error", "The image URL changed during the check. Submit again to check the new image.");
+              return;
+            }
+            if (result === "blocked") {
+              showImageReview("blocked", "This image may contain adult content, so it can’t be posted.");
+              return;
+            }
+            showImageReview("allowed", "Image check passed on this device.");
+          } catch (error) {
+            console.error("Could not check image content.", error);
+            showImageReview("error", "Image check could not complete. Check your connection and use an image host that allows browser access; the image was not posted.");
+            return;
+          } finally {
+            submitButton.disabled = false;
+          }
+        }
+
+        if (!title && !body && !image) {
+          formError.textContent = "Add at least a title, story, or image before publishing.";
+          formError.classList.add("visible");
+          return;
+        }
+
+        const post = {
+          id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+          author, title, image, body, score: 0, comments: [], createdAt: Date.now(), ownerId
+        };
+        posts.unshift(post);
+        if (!savePosts()) {
+          posts.shift();
+          return;
+        }
+        postForm.reset();
+        showImageReview("", "");
+        closeModal();
+        sortSelect.value = "new";
+        searchInput.value = "";
+        renderPosts();
+        showToast("Your story is live!");
+      });
+
+      feedList.addEventListener("click", event => {
+        const button = event.target.closest("button[data-action]");
+        if (!button) return;
+        if (button.dataset.action === "new-post") {
+          openModal();
+          return;
+        }
+        const card = button.closest("[data-post-id]");
+        if (!card) return;
+        const post = posts.find(item => item.id === card.dataset.postId);
+        if (!post) return;
+
+        if (button.dataset.action === "delete") {
+          const age = Date.now() - Number(post.createdAt);
+          if (!ownerId || post.ownerId !== ownerId || age < 0 || age >= DELETE_WINDOW_MS) {
+            renderPosts();
+            showToast("Only the original browser can delete this post within five hours.");
+            return;
+          }
+          if (!window.confirm("Delete this post? This can’t be undone.")) return;
+          const originalIndex = posts.indexOf(post);
+          posts.splice(originalIndex, 1);
+          if (!savePosts()) {
+            posts.splice(originalIndex, 0, post);
+            renderPosts();
+            return;
+          }
+          delete votes[post.id];
+          if (!saveVotes()) console.warn("The deleted post's saved vote could not be removed.");
+          if (activeCommentPost === post.id) activeCommentPost = null;
+          renderPosts();
+          showToast("Post deleted.");
+          return;
+        }
+
+        if (button.dataset.action === "vote") {
+          const previousVote = votes[post.id] || "";
+          const nextVote = previousVote === button.dataset.vote ? "" : button.dataset.vote;
+          const voteValue = value => value === "up" ? 1 : value === "down" ? -1 : 0;
+          post.score = (Number(post.score) || 0) - voteValue(previousVote) + voteValue(nextVote);
+          votes[post.id] = nextVote;
+          if (savePosts() && saveVotes()) renderPosts();
+          return;
+        }
+        if (button.dataset.action === "comments") {
+          activeCommentPost = activeCommentPost === post.id ? null : post.id;
+          renderPosts();
+          posts.forEach(post => {
+            const image = safeImageURL(post.image);
+            if (!image || imageSafety.has(image)) return;
+            imageSafety.set(image, "checking");
+            renderPosts();
+            checkImageSafety(image)
+              .then(renderPosts)
+              .catch(error => {
+                console.warn("Saved image could not be checked and was hidden.", error);
+                renderPosts();
+              });
+          });
+          if (activeCommentPost) {
+            const input = feedList.querySelector(`[data-post-id="${CSS.escape(post.id)}"] .comment-input`);
+            if (input) input.focus();
+          }
+        }
+      });
+
+      function closeCommentNameModal() {
+        commentNameModal.classList.remove("open");
+        document.body.style.overflow = postModal.classList.contains("open") ? "hidden" : "";
+        pendingComment = null;
+      }
+
+      function cancelCommentName() {
+        closeCommentNameModal();
+        if (activeCommentPost) {
+          const input = feedList.querySelector(`[data-post-id="${CSS.escape(activeCommentPost)}"] .comment-input`);
+          if (input) input.focus();
+        }
+      }
+
+      function savePendingComment(author) {
+        if (!pendingComment) return;
+        const { post, text } = pendingComment;
+        const comment = { author: author || "Anonymous", text, createdAt: Date.now() };
+        if (!Array.isArray(post.comments)) post.comments = [];
+        post.comments.push(comment);
+        if (!savePosts()) {
+          post.comments.pop();
+          return;
+        }
+        activeCommentPost = post.id;
+        closeCommentNameModal();
+        renderPosts();
+        showToast("Comment added.");
+      }
+
+      document.getElementById("closeCommentNameModal").addEventListener("click", cancelCommentName);
+      document.getElementById("cancelCommentName").addEventListener("click", cancelCommentName);
+      document.getElementById("postAnonymous").addEventListener("click", () => savePendingComment("Anonymous"));
+      commentNameModal.addEventListener("click", event => {
+        if (event.target === commentNameModal) cancelCommentName();
+      });
+      commentNameForm.addEventListener("submit", event => {
+        event.preventDefault();
+        const author = commentNameInput.value.trim();
+        if (!author) {
+          commentNameInput.focus();
+          return;
+        }
+        savePendingComment(author);
+      });
+
+      feedList.addEventListener("submit", event => {
+        const form = event.target.closest('form[data-action="comment-form"]');
+        if (!form) return;
+        event.preventDefault();
+        const card = form.closest("[data-post-id]");
+        const post = posts.find(item => item.id === card.dataset.postId);
+        const input = form.elements.comment;
+        const text = input.value.trim();
+        if (!post || !text) return;
+        pendingComment = { post, text };
+        commentNameInput.value = "";
+        commentNameModal.classList.add("open");
+        document.body.style.overflow = "hidden";
+        window.setTimeout(() => commentNameInput.focus(), 30);
+      });
+
+      renderPosts();
+    })();
+  </script>
+</body>
+</html>1
