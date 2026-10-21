@@ -898,21 +898,34 @@
           }
         }
 
-        const { error } = await supabaseClient.from("gear_posts").insert({
+        const { data: savedPost, error } = await supabaseClient.from("gear_posts").insert({
           author, title, image, body, owner_id: ownerId
-        });
+        }).select("*").single();
         if (error) {
           console.error("Could not publish GearHub post.", error);
           formError.textContent = error.message || "Could not publish this post. Please try again.";
           formError.classList.add("visible");
           return;
         }
+        posts.unshift({
+          id: savedPost.id,
+          ownerId: savedPost.owner_id,
+          author: savedPost.author,
+          title: savedPost.title,
+          image: savedPost.image,
+          body: savedPost.body,
+          score: savedPost.score,
+          createdAt: Date.parse(savedPost.created_at),
+          comments: []
+        });
+        renderPosts();
+        checkSavedPostImages();
         postForm.reset();
         showImageReview("", "");
         closeModal();
         sortSelect.value = "new";
         searchInput.value = "";
-        showToast("Your story is saved. Reload to see it in the feed.");
+        showToast("Your story is live on this device.");
       });
 
       feedList.addEventListener("click", async event => {
@@ -940,13 +953,18 @@
             return;
           }
           if (!window.confirm("Delete this post? This can’t be undone.")) return;
-          const { error } = await supabaseClient.from("gear_posts").delete().eq("id", post.id);
+          const { error } = await supabaseClient.from("gear_posts").delete()
+            .eq("id", post.id)
+            .eq("owner_id", ownerId);
           if (error) {
             console.error("Could not delete GearHub post.", error);
             showToast(error.message || "Could not delete this post.");
             return;
           }
-          showToast("Post deleted. Reload to update the feed.");
+          posts = posts.filter(item => item.id !== post.id);
+          if (activeCommentPost === post.id) activeCommentPost = null;
+          renderPosts();
+          showToast("Post deleted.");
           return;
         }
 
@@ -963,7 +981,12 @@
             showToast(error.message || "Your vote could not be saved.");
             return;
           }
-          showToast("Vote saved. Reload to update the score.");
+          const voteValue = vote => vote === "up" ? 1 : vote === "down" ? -1 : 0;
+          post.score = Number(post.score || 0) + voteValue(nextVote) - voteValue(previousVote);
+          if (nextVote) votes[post.id] = nextVote;
+          else delete votes[post.id];
+          renderPosts();
+          showToast("Vote saved.");
           return;
         }
         if (button.dataset.action === "comments") {
@@ -993,20 +1016,26 @@
       async function savePendingComment(author) {
         if (!pendingComment) return;
         const { post, text } = pendingComment;
-        const { error } = await supabaseClient.from("gear_comments").insert({
+        const { data: savedComment, error } = await supabaseClient.from("gear_comments").insert({
           post_id: post.id,
           owner_id: ownerId,
           author: author || "Anonymous",
           text
-        });
+        }).select("*").single();
         if (error) {
           console.error("Could not save GearHub comment.", error);
           showToast(error.message || "Your comment could not be saved.");
           return;
         }
+        post.comments.push({
+          author: savedComment.author,
+          text: savedComment.text,
+          createdAt: Date.parse(savedComment.created_at)
+        });
         activeCommentPost = post.id;
         closeCommentNameModal();
-        showToast("Comment saved. Reload to see it.");
+        renderPosts();
+        showToast("Comment added.");
       }
 
       document.getElementById("closeCommentNameModal").addEventListener("click", cancelCommentName);
