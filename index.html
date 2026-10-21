@@ -618,11 +618,6 @@
           if (!session?.user?.id) throw new Error("Anonymous sign-in did not return a user.");
           ownerId = session.user.id;
           await refreshFeed();
-          supabaseClient.channel("gearboard-live-feed")
-            .on("postgres_changes", { event: "*", schema: "public", table: "gear_posts" }, refreshFeedSafely)
-            .on("postgres_changes", { event: "*", schema: "public", table: "gear_comments" }, refreshFeedSafely)
-            .on("postgres_changes", { event: "*", schema: "public", table: "gear_votes" }, refreshFeedSafely)
-            .subscribe();
           backendReady = true;
         })().catch(error => {
           console.error("Could not connect to the shared GearHub database.", error);
@@ -635,15 +630,6 @@
           backendInitialization = null;
         });
         return backendInitialization;
-      }
-
-      async function refreshFeedSafely() {
-        try {
-          await refreshFeed();
-        } catch (error) {
-          console.error("Could not refresh the shared GearHub feed.", error);
-          showToast("The feed could not be refreshed.");
-        }
       }
 
       function applyTheme(theme) {
@@ -883,6 +869,12 @@
           return;
         }
 
+        if (!title && !body && !image) {
+          formError.textContent = "Add at least a title, story, or image before publishing.";
+          formError.classList.add("visible");
+          return;
+        }
+
         if (image) {
           submitButton.disabled = true;
           showImageReview("checking", "Checking the image on this device. The first check may take a moment.");
@@ -906,12 +898,6 @@
           }
         }
 
-        if (!title && !body && !image) {
-          formError.textContent = "Add at least a title, story, or image before publishing.";
-          formError.classList.add("visible");
-          return;
-        }
-
         const { error } = await supabaseClient.from("gear_posts").insert({
           author, title, image, body, owner_id: ownerId
         });
@@ -926,8 +912,7 @@
         closeModal();
         sortSelect.value = "new";
         searchInput.value = "";
-        await refreshFeedSafely();
-        showToast("Your story is live!");
+        showToast("Your story is saved. Reload to see it in the feed.");
       });
 
       feedList.addEventListener("click", async event => {
@@ -961,9 +946,7 @@
             showToast(error.message || "Could not delete this post.");
             return;
           }
-          if (activeCommentPost === post.id) activeCommentPost = null;
-          await refreshFeedSafely();
-          showToast("Post deleted.");
+          showToast("Post deleted. Reload to update the feed.");
           return;
         }
 
@@ -980,7 +963,7 @@
             showToast(error.message || "Your vote could not be saved.");
             return;
           }
-          await refreshFeedSafely();
+          showToast("Vote saved. Reload to update the score.");
           return;
         }
         if (button.dataset.action === "comments") {
@@ -1023,8 +1006,7 @@
         }
         activeCommentPost = post.id;
         closeCommentNameModal();
-        await refreshFeedSafely();
-        showToast("Comment added.");
+        showToast("Comment saved. Reload to see it.");
       }
 
       document.getElementById("closeCommentNameModal").addEventListener("click", cancelCommentName);
